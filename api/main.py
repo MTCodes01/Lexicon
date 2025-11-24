@@ -73,7 +73,6 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={
             "detail": exc.errors(),
-            "body": exc.body,
         },
     )
 
@@ -113,7 +112,7 @@ async def root():
 
 
 # Include routers
-app.include_router(auth_router, prefix="/auth", tags=["Authentication"])
+app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])
 
 # Auto-discover and register module routers
 if settings.MODULES_AUTO_DISCOVER:

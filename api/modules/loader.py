@@ -42,7 +42,7 @@ def register_module_routers(app: FastAPI):
                         router: APIRouter = getattr(router_module, "router")
                         
                         # Register the router with a prefix from the module's slug
-                        app.include_router(router, prefix=f"/{module_config['slug']}", tags=[module_config['name']])
-                        print(f"Registered API routes for module: {module_config['name']} at /{module_config['slug']}")
+                        app.include_router(router, prefix=f"/api/v1/{module_config['slug']}", tags=[module_config['name']])
+                        print(f"Registered API routes for module: {module_config['name']} at /api/v1/{module_config['slug']}")
                     except Exception as e:
                         print(f"Error loading router for module {module_path.name}: {e}")
