@@ -11,6 +11,9 @@ export interface User {
   email: string;
   username: string;
   full_name?: string;
+  bio?: string;
+  avatar_url?: string;
+  banner_url?: string;
   is_active: boolean;
   is_superuser: boolean;
   mfa_enabled: boolean;
@@ -71,4 +74,34 @@ export interface UpdateTaskRequest {
   priority?: TaskPriority;
   due_date?: string;
   tags?: string[];
+}
+
+// Profile Types
+export interface UserStats {
+  account_age_days: number;
+  total_tasks: number;
+  active_sessions: number;
+  last_login: string | null;
+  created_at: string;
+}
+
+export interface UserSession {
+  id: string;
+  device_info: string;
+  ip_address: string;
+  last_activity: string | null;
+  created_at: string;
+  is_current: boolean;
+}
+
+export interface UserPasswordUpdate {
+  current_password: string;
+  new_password: string;
+  confirm_password: string;
+}
+
+export interface UserUpdate {
+  full_name?: string;
+  username?: string;
+  email?: string;
 }

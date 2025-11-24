@@ -81,6 +81,7 @@ class User(Base):
     # Profile
     full_name = Column(String(255), nullable=True)
     avatar_url = Column(String(500), nullable=True)
+    banner_url = Column(String(500), nullable=True)
     bio = Column(Text, nullable=True)
     timezone = Column(String(50), default="UTC")
     language = Column(String(10), default="en")

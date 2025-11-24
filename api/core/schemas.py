@@ -49,6 +49,9 @@ class UserBase(BaseSchema):
     email: EmailStr
     username: Optional[str] = None
     full_name: Optional[str] = None
+    bio: Optional[str] = None
+    avatar_url: Optional[str] = None
+    banner_url: Optional[str] = None
     timezone: str = "UTC"
     language: str = "en"
     is_active: bool = True

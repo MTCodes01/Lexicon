@@ -4,7 +4,7 @@ Handles login, registration, token refresh, MFA setup/verification, and API keys
 """
 from datetime import datetime, timedelta
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, UploadFile, File
 from sqlalchemy.orm import Session
 
 from api.database import get_db
@@ -292,6 +292,198 @@ async def get_current_user_info(
 ):
     """Get current user information with roles."""
     return current_user
+
+
+@router.get("/me/stats")
+async def get_user_statistics(
+    current_user: models.User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Get user statistics including account age, task count, and session info."""
+    from datetime import datetime
+    
+    # Calculate account age in days
+    account_age_days = (datetime.utcnow() - current_user.created_at).days
+    
+    # Get total tasks count
+    from api.modules.tasks import models as task_models
+    total_tasks = db.query(task_models.Task).filter(
+        task_models.Task.user_id == current_user.id
+    ).count()
+    
+    # Get active sessions count
+    active_sessions = crud.session_crud.get_active_user_sessions(db, current_user.id)
+    active_sessions_count = len(active_sessions) if active_sessions else 0
+    
+    return {
+        "account_age_days": account_age_days,
+        "total_tasks": total_tasks,
+        "active_sessions": active_sessions_count,
+        "last_login": current_user.last_login_at.isoformat() if current_user.last_login_at else None,
+        "created_at": current_user.created_at.isoformat(),
+    }
+
+
+@router.get("/me/sessions")
+async def get_user_sessions(
+    current_user: models.User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+    request: Request = None
+):
+    """Get all active sessions for the current user."""
+    sessions = crud.session_crud.get_active_user_sessions(db, current_user.id)
+    
+    # Get current request's session token to mark current session
+    current_token = None
+    if request and request.headers.get("Authorization"):
+        auth_header = request.headers.get("Authorization")
+        if auth_header.startswith("Bearer "):
+            current_token = auth_header[7:]
+    
+    result = []
+    for session in sessions:
+        is_current = session.access_token == current_token
+        result.append({
+            "id": str(session.id),
+            "device_info": session.user_agent or "Unknown",
+            "ip_address": session.ip_address or "Unknown",
+            "last_activity": session.last_activity_at.isoformat() if session.last_activity_at else None,
+            "created_at": session.created_at.isoformat(),
+            "is_current": is_current,
+        })
+    
+    return result
+
+
+@router.delete("/me/sessions/{session_id}")
+async def revoke_session(
+    session_id: str,
+    current_user: models.User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Revoke a specific user session."""
+    # Get the session
+    session = db.query(models.Session).filter(
+        models.Session.id == session_id,
+        models.Session.user_id == current_user.id
+    ).first()
+    
+    if not session:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Session not found"
+        )
+    
+    # Revoke the session
+    crud.session_crud.revoke_session(db, session)
+    
+    # Log the action
+    crud.audit_log_crud.create(
+        db,
+        user_id=current_user.id,
+        action=models.AuditAction.LOGOUT,
+        description=f"Session revoked: {session_id[:8]}...",
+    )
+    
+    return {"message": "Session revoked successfully"}
+
+
+@router.post("/me/avatar")
+async def upload_avatar(
+    file: UploadFile,
+    current_user: models.User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Upload user avatar image."""
+    from api.core.storage import upload_avatar as upload_avatar_file, delete_avatar
+    
+    # Delete old avatar if exists
+    if current_user.avatar_url:
+        delete_avatar(current_user.avatar_url)
+    
+    # Upload new avatar
+    avatar_url = await upload_avatar_file(file, str(current_user.id))
+    
+    # Update user record
+    current_user.avatar_url = avatar_url
+    db.commit()
+    db.refresh(current_user)
+    
+    # Log avatar update
+    crud.audit_log_crud.create(
+        db,
+        user_id=current_user.id,
+        action=models.AuditAction.UPDATE,
+        resource_type="user",
+        resource_id=str(current_user.id),
+        description="Avatar uploaded",
+    )
+    
+    return {"avatar_url": avatar_url, "message": "Avatar uploaded successfully"}
+
+
+@router.delete("/me/avatar")
+async def delete_user_avatar(
+    current_user: models.User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Delete user avatar."""
+    from api.core.storage import delete_avatar
+    
+    if not current_user.avatar_url:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No avatar to delete"
+        )
+    
+    # Delete from storage
+    delete_avatar(current_user.avatar_url)
+    
+    # Remove from user record
+    current_user.avatar_url = None
+    db.commit()
+    
+    return {"message": "Avatar deleted successfully"}
+
+
+@router.post("/me/banner", response_model=schemas.UserResponse)
+async def upload_banner(
+    file: UploadFile = File(...),
+    current_user: models.User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Upload user profile banner."""
+    from api.core.storage import upload_banner as upload_banner_file, delete_banner
+    
+    # Delete existing banner if any
+    if current_user.banner_url:
+        delete_banner(current_user.banner_url)
+    
+    # Upload new banner
+    banner_url = await upload_banner_file(file, str(current_user.id))
+    
+    # Update user
+    current_user.banner_url = banner_url
+    db.commit()
+    db.refresh(current_user)
+    
+    return current_user
+
+
+@router.delete("/me/banner", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_banner(
+    current_user: models.User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Delete user profile banner."""
+    from api.core.storage import delete_banner
+    
+    if current_user.banner_url:
+        delete_banner(current_user.banner_url)
+        
+        current_user.banner_url = None
+        db.add(current_user)
+        db.commit()
 
 
 @router.put("/me", response_model=schemas.UserResponse)
