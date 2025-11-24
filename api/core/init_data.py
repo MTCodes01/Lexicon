@@ -66,6 +66,12 @@ def init_default_permissions(db: Session) -> None:
         
         # Audit log permissions
         {"name": "audit.view", "display_name": "View Audit Logs", "resource": "audit", "action": "view", "is_system": True},
+        
+        # Task permissions (for Tasks module)
+        {"name": "tasks.view", "display_name": "View Tasks", "resource": "tasks", "action": "view", "is_system": False},
+        {"name": "tasks.create", "display_name": "Create Tasks", "resource": "tasks", "action": "create", "is_system": False},
+        {"name": "tasks.edit", "display_name": "Edit Tasks", "resource": "tasks", "action": "edit", "is_system": False},
+        {"name": "tasks.delete", "display_name": "Delete Tasks", "resource": "tasks", "action": "delete", "is_system": False},
     ]
     
     for perm_data in default_permissions:
@@ -91,7 +97,8 @@ def assign_permissions_to_roles(db: Session) -> None:
     admin_role = crud.role_crud.get_by_name(db, "admin")
     if admin_role:
         admin_perms = [
-            "users.view", "roles.view", "settings.view", "settings.edit", "audit.view"
+            "users.view", "roles.view", "settings.view", "settings.edit", "audit.view",
+            "tasks.view", "tasks.create", "tasks.edit", "tasks.delete",
         ]
         permissions = []
         for perm_name in admin_perms:
@@ -101,10 +108,13 @@ def assign_permissions_to_roles(db: Session) -> None:
         admin_role.permissions = permissions
         print(f"  ✓ Assigned permissions to admin role")
     
-    # User gets basic permissions
+    # User gets basic permissions including tasks
     user_role = crud.role_crud.get_by_name(db, "user")
     if user_role:
-        user_perms = ["settings.view"]
+        user_perms = [
+            "settings.view",
+            "tasks.view", "tasks.create", "tasks.edit", "tasks.delete",
+        ]
         permissions = []
         for perm_name in user_perms:
             perm = crud.permission_crud.get_by_name(db, perm_name)
