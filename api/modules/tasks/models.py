@@ -51,6 +51,12 @@ class Task(Base):
     # Organization
     tags = Column(JSON, nullable=True)  # Store as JSON array for SQLite compatibility
     
+    # Notification tracking
+    notification_24h_sent = Column(Boolean, default=False, nullable=False)
+    notification_1h_sent = Column(Boolean, default=False, nullable=False)
+    notification_overdue_sent = Column(Boolean, default=False, nullable=False)
+    last_notification_at = Column(DateTime, nullable=True)
+    
     # Sharing
     is_shared = Column(Boolean, default=False, index=True)
     
@@ -59,7 +65,7 @@ class Task(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
-    # user = relationship("User", back_populates="tasks")
+    user = relationship("User", back_populates="tasks")
     
     __table_args__ = (
         Index('ix_tasks_user_status', 'user_id', 'status'),

@@ -71,6 +71,8 @@ def init_db() -> None:
         AuditLog, Setting, APIKey, Session as SessionModel,
         MFADevice
     )
+    from api.modules.tasks.models import Task
+    from api.modules.notes.models import Note, NoteCategory, NoteVersion
     
     Base.metadata.create_all(bind=engine)
 

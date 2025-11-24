@@ -10,8 +10,9 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from api.config import settings
 from api.database import init_db, close_db
-from api.core.routes import router as auth_router
-from api.modules import loader
+from api.core.routes import router as core_router
+from api.modules.tasks import router as tasks_router
+from api.modules.notes import router as notes_router
 
 
 @asynccontextmanager
@@ -113,11 +114,6 @@ async def root():
 
 
 # Include routers
-app.include_router(auth_router, prefix="/auth", tags=["Authentication"])
-
-# Auto-discover and register module routers
-if settings.MODULES_AUTO_DISCOVER:
-    print("🔍 Auto-discovering modules...")
-    loader.register_module_routers(app)
-    print("✅ Modules registered")
-
+app.include_router(core_router)
+app.include_router(tasks_router)
+app.include_router(notes_router)

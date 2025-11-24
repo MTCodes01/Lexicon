@@ -101,11 +101,14 @@ class User(Base):
     email_verified_at = Column(DateTime, nullable=True)
     
     # Relationships
-    roles = relationship("Role", secondary=user_roles, back_populates="users", lazy="selectin")
-    sessions = relationship("Session", back_populates="user", cascade="all, delete-orphan")
+    roles = relationship("Role", secondary="user_roles", back_populates="users")
     api_keys = relationship("APIKey", back_populates="user", cascade="all, delete-orphan")
+    sessions = relationship("Session", back_populates="user", cascade="all, delete-orphan")
     mfa_devices = relationship("MFADevice", back_populates="user", cascade="all, delete-orphan")
-    audit_logs = relationship("AuditLog", back_populates="user", cascade="all, delete-orphan")
+    tasks = relationship("Task", back_populates="user", cascade="all, delete-orphan")
+    notes = relationship("Note", back_populates="user", cascade="all, delete-orphan")
+    note_categories = relationship("NoteCategory", back_populates="user", cascade="all, delete-orphan")
+    audit_logs = relationship("AuditLog", back_populates="user")
     settings = relationship("Setting", back_populates="user", cascade="all, delete-orphan")
     
     def __repr__(self):

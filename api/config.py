@@ -79,11 +79,15 @@ class Settings(BaseSettings):
     LOCAL_LLM_ENDPOINT: Optional[str] = None
     
     # Email (for notifications)
-    SMTP_HOST: Optional[str] = None
+    SMTP_HOST: str = "smtp.gmail.com"
     SMTP_PORT: int = 587
     SMTP_USER: Optional[str] = None
     SMTP_PASSWORD: Optional[str] = None
     SMTP_FROM_EMAIL: str = "noreply@lexicon.local"
+    SMTP_USE_TLS: bool = True
+    
+    # Application URL (for email links)
+    APP_URL: str = "http://localhost:3000"
     
     # Worker/Queue
     CELERY_BROKER_URL: str = "redis://localhost:6379/1"
