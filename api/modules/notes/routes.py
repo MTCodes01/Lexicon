@@ -15,6 +15,66 @@ from api.modules.notes.models import Note, NoteCategory
 router = APIRouter(prefix="/notes", tags=["notes"])
 
 
+# Category endpoints
+@router.post("/categories", response_model=schemas.NoteCategoryResponse, status_code=201)
+def create_category(
+    category: schemas.NoteCategoryCreate,
+    current_user: User = Depends(require_permissions("notes.create")),
+    db: Session = Depends(get_db),
+):
+    """Create a new category."""
+    return crud.create_category(db, category, current_user.id)
+
+
+@router.get("/categories", response_model=List[schemas.NoteCategoryResponse])
+def list_categories(
+    current_user: User = Depends(require_permissions("notes.view")),
+    db: Session = Depends(get_db),
+):
+    """List all categories."""
+    return crud.get_categories(db, current_user.id)
+
+
+@router.get("/categories/{category_id}", response_model=schemas.NoteCategoryResponse)
+def get_category(
+    category_id: UUID,
+    current_user: User = Depends(require_permissions("notes.view")),
+    db: Session = Depends(get_db),
+):
+    """Get a specific category."""
+    category = crud.get_category(db, category_id, current_user.id)
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+    return category
+
+
+@router.put("/categories/{category_id}", response_model=schemas.NoteCategoryResponse)
+def update_category(
+    category_id: UUID,
+    category_update: schemas.NoteCategoryUpdate,
+    current_user: User = Depends(require_permissions("notes.edit")),
+    db: Session = Depends(get_db),
+):
+    """Update a category."""
+    category = crud.update_category(db, category_id, category_update, current_user.id)
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+    return category
+
+
+@router.delete("/categories/{category_id}", status_code=204)
+def delete_category(
+    category_id: UUID,
+    current_user: User = Depends(require_permissions("notes.delete")),
+    db: Session = Depends(get_db),
+):
+    """Delete a category."""
+    success = crud.delete_category(db, category_id, current_user.id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Category not found")
+    return None
+
+
 # Note endpoints
 @router.post("/", response_model=schemas.NoteResponse, status_code=201)
 def create_note(
@@ -177,63 +237,3 @@ def get_all_tags(
 ):
     """Get all unique tags."""
     return crud.get_all_tags(db, current_user.id)
-
-
-# Category endpoints
-@router.post("/categories", response_model=schemas.NoteCategoryResponse, status_code=201)
-def create_category(
-    category: schemas.NoteCategoryCreate,
-    current_user: User = Depends(require_permissions("notes.create")),
-    db: Session = Depends(get_db),
-):
-    """Create a new category."""
-    return crud.create_category(db, category, current_user.id)
-
-
-@router.get("/categories", response_model=List[schemas.NoteCategoryResponse])
-def list_categories(
-    current_user: User = Depends(require_permissions("notes.view")),
-    db: Session = Depends(get_db),
-):
-    """List all categories."""
-    return crud.get_categories(db, current_user.id)
-
-
-@router.get("/categories/{category_id}", response_model=schemas.NoteCategoryResponse)
-def get_category(
-    category_id: UUID,
-    current_user: User = Depends(require_permissions("notes.view")),
-    db: Session = Depends(get_db),
-):
-    """Get a specific category."""
-    category = crud.get_category(db, category_id, current_user.id)
-    if not category:
-        raise HTTPException(status_code=404, detail="Category not found")
-    return category
-
-
-@router.put("/categories/{category_id}", response_model=schemas.NoteCategoryResponse)
-def update_category(
-    category_id: UUID,
-    category_update: schemas.NoteCategoryUpdate,
-    current_user: User = Depends(require_permissions("notes.edit")),
-    db: Session = Depends(get_db),
-):
-    """Update a category."""
-    category = crud.update_category(db, category_id, category_update, current_user.id)
-    if not category:
-        raise HTTPException(status_code=404, detail="Category not found")
-    return category
-
-
-@router.delete("/categories/{category_id}", status_code=204)
-def delete_category(
-    category_id: UUID,
-    current_user: User = Depends(require_permissions("notes.delete")),
-    db: Session = Depends(get_db),
-):
-    """Delete a category."""
-    success = crud.delete_category(db, category_id, current_user.id)
-    if not success:
-        raise HTTPException(status_code=404, detail="Category not found")
-    return None

@@ -13,11 +13,11 @@ interface NoteSidebarProps {
 }
 
 export function NoteSidebar({
-  categories,
+  categories = [],
   selectedFilter,
   onFilterChange,
   onCreateCategory,
-  tags,
+  tags = [],
   onTagClick,
 }: NoteSidebarProps) {
   const filters = [

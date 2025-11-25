@@ -26,7 +26,7 @@ export function NoteEditorModal({ isOpen, onClose, note, categories, onSave }: N
   useEffect(() => {
     if (note) {
       setTitle(note.title);
-      setContent(note.content);
+      setContent(note.content || '');
       setCategoryId(note.category_id || '');
       setTags(note.tags || []);
     } else {
@@ -64,8 +64,10 @@ export function NoteEditorModal({ isOpen, onClose, note, categories, onSave }: N
 
       await onSave(data);
       setHasChanges(false);
+      onClose();
     } catch (error) {
       console.error('Failed to save note:', error);
+      alert('Failed to save note. Please try again.');
     } finally {
       setIsSaving(false);
     }
@@ -95,8 +97,8 @@ export function NoteEditorModal({ isOpen, onClose, note, categories, onSave }: N
   if (!isOpen) return null;
 
   // Calculate metadata
-  const wordCount = content.replace(/<[^>]*>/g, '').split(/\s+/).filter(Boolean).length;
-  const charCount = content.replace(/<[^>]*>/g, '').length;
+  const wordCount = (content || '').replace(/<[^>]*>/g, '').split(/\s+/).filter(Boolean).length;
+  const charCount = (content || '').replace(/<[^>]*>/g, '').length;
   const readingTime = Math.ceil(wordCount / 200);
 
   return (

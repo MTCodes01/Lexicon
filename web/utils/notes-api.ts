@@ -27,26 +27,27 @@ export const notesApi = {
     if (filters?.page) params.append('page', String(filters.page));
     if (filters?.size) params.append('size', String(filters.size));
 
-    const response = await apiClient.get(`/notes?${params.toString()}`);
-    return response.data;
+    return await apiClient.get(`/notes/?${params.toString()}`);
   },
 
   // Get a single note
   getNote: async (id: string): Promise<Note> => {
-    const response = await apiClient.get(`/notes/${id}`);
-    return response.data;
+    return await apiClient.get(`/notes/${id}`);
   },
 
   // Create a new note
   createNote: async (data: NoteCreate): Promise<Note> => {
-    const response = await apiClient.post('/notes', data);
-    return response.data;
+    try {
+      return await apiClient.post('/notes/', data);
+    } catch (error: any) {
+      console.error('Create note failed:', error.response?.data || error.message);
+      throw error;
+    }
   },
 
   // Update a note
   updateNote: async (id: string, data: NoteUpdate): Promise<Note> => {
-    const response = await apiClient.put(`/notes/${id}`, data);
-    return response.data;
+    return await apiClient.put(`/notes/${id}`, data);
   },
 
   // Delete a note
@@ -56,26 +57,22 @@ export const notesApi = {
 
   // Toggle pin status
   togglePin: async (id: string): Promise<Note> => {
-    const response = await apiClient.post(`/notes/${id}/pin`);
-    return response.data;
+    return await apiClient.post(`/notes/${id}/pin`);
   },
 
   // Toggle favorite status
   toggleFavorite: async (id: string): Promise<Note> => {
-    const response = await apiClient.post(`/notes/${id}/favorite`);
-    return response.data;
+    return await apiClient.post(`/notes/${id}/favorite`);
   },
 
   // Toggle archive status
   toggleArchive: async (id: string): Promise<Note> => {
-    const response = await apiClient.post(`/notes/${id}/archive`);
-    return response.data;
+    return await apiClient.post(`/notes/${id}/archive`);
   },
 
   // Get all tags
   getAllTags: async (): Promise<string[]> => {
-    const response = await apiClient.get('/notes/tags/all');
-    return response.data;
+    return await apiClient.get('/notes/tags/all');
   },
 };
 
@@ -83,26 +80,22 @@ export const notesApi = {
 export const categoriesApi = {
   // Get all categories
   getCategories: async (): Promise<NoteCategory[]> => {
-    const response = await apiClient.get('/notes/categories');
-    return response.data;
+    return await apiClient.get('/notes/categories');
   },
 
   // Get a single category
   getCategory: async (id: string): Promise<NoteCategory> => {
-    const response = await apiClient.get(`/notes/categories/${id}`);
-    return response.data;
+    return await apiClient.get(`/notes/categories/${id}`);
   },
 
   // Create a new category
   createCategory: async (data: NoteCategoryCreate): Promise<NoteCategory> => {
-    const response = await apiClient.post('/notes/categories', data);
-    return response.data;
+    return await apiClient.post('/notes/categories', data);
   },
 
   // Update a category
   updateCategory: async (id: string, data: NoteCategoryUpdate): Promise<NoteCategory> => {
-    const response = await apiClient.put(`/notes/categories/${id}`, data);
-    return response.data;
+    return await apiClient.put(`/notes/categories/${id}`, data);
   },
 
   // Delete a category

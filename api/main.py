@@ -13,6 +13,7 @@ from api.database import init_db, close_db
 from api.core.routes import router as core_router
 from api.modules.tasks import router as tasks_router
 from api.modules.notes import router as notes_router
+from api.modules import loader
 
 
 @asynccontextmanager
@@ -113,8 +114,7 @@ async def root():
 
 
 # Include routers
-app.include_router(auth_router, prefix="/api/v1/auth", tags=["Authentication"])
-app.include_router(core_router)
+app.include_router(core_router, prefix="/api/v1/auth", tags=["Authentication"])
 app.include_router(tasks_router)
 app.include_router(notes_router)
 

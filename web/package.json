@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",
+    "@tiptap/extension-character-count": "^3.11.0",
     "@tiptap/extension-code-block-lowlight": "^3.11.0",
     "@tiptap/extension-image": "^3.11.0",
     "@tiptap/extension-link": "^3.11.0",

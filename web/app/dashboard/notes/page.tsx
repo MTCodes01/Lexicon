@@ -76,18 +76,20 @@ export default function NotesPage() {
   const loadCategories = async () => {
     try {
       const data = await categoriesApi.getCategories();
-      setCategories(data);
+      setCategories(data || []);
     } catch (error) {
       console.error('Failed to load categories:', error);
+      setCategories([]);
     }
   };
 
   const loadTags = async () => {
     try {
       const data = await notesApi.getAllTags();
-      setTags(data);
+      setTags(data || []);
     } catch (error) {
       console.error('Failed to load tags:', error);
+      setTags([]);
     }
   };
 

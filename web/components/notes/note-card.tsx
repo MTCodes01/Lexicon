@@ -1,6 +1,6 @@
 'use client';
 
-import { Pin, Star, Archive, MoreVertical, Calendar } from 'lucide-react';
+import { Pin, Star, Archive, MoreVertical, Calendar, Trash2 } from 'lucide-react';
 import type { Note } from '@/types/notes';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -22,7 +22,7 @@ export function NoteCard({
   onDelete,
 }: NoteCardProps) {
   // Strip HTML tags for preview
-  const contentPreview = note.content.replace(/<[^>]*>/g, '').substring(0, 150);
+  const contentPreview = (note.content || '').replace(/<[^>]*>/g, '').substring(0, 150);
 
   return (
     <div
@@ -68,6 +68,16 @@ export function NoteCard({
             title={note.is_archived ? 'Unarchive' : 'Archive'}
           >
             <Archive className="w-4 h-4" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-red-500"
+            title="Delete"
+          >
+            <Trash2 className="w-4 h-4" />
           </button>
         </div>
       </div>
