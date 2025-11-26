@@ -1,5 +1,5 @@
 from api.database import Base, engine
-from api import models
+from api.core import models
 
 print("Creating database tables...")
 Base.metadata.create_all(bind=engine)

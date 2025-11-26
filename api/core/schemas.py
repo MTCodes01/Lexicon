@@ -49,6 +49,9 @@ class UserBase(BaseSchema):
     email: EmailStr
     username: Optional[str] = None
     full_name: Optional[str] = None
+    bio: Optional[str] = None
+    avatar_url: Optional[str] = None
+    banner_url: Optional[str] = None
     timezone: str = "UTC"
     language: str = "en"
     is_active: bool = True
@@ -75,6 +78,17 @@ class UserUpdate(BaseModel):
 class UserPasswordUpdate(BaseModel):
     """Schema for updating user password."""
     current_password: str
+    new_password: str = Field(..., min_length=8, max_length=100)
+
+
+class PasswordResetRequest(BaseModel):
+    """Schema for requesting password reset."""
+    email: EmailStr
+
+
+class PasswordResetConfirm(BaseModel):
+    """Schema for confirming password reset."""
+    token: str
     new_password: str = Field(..., min_length=8, max_length=100)
 
 
@@ -274,20 +288,6 @@ class SettingBase(BaseModel):
 class SettingCreate(SettingBase):
     """Schema for creating a setting."""
     pass
-
-
-class SettingUpdate(BaseModel):
-    """Schema for updating a setting."""
-    value: dict | str | int | float | bool | None = None
-
-
-class SettingResponse(SettingBase, BaseSchema):
-    """Schema for setting response."""
-    id: UUID4
-    user_id: Optional[UUID4] = None
-    is_system: bool
-    created_at: datetime
-    updated_at: datetime
 
 
 # Pagination schemas

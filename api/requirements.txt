@@ -6,16 +6,16 @@ python-multipart==0.0.9
 # Database
 sqlalchemy==2.0.30
 psycopg2-binary==2.9.9
-alembic==1.13.1  # Database migrations
+alembic==1.13.1
 
 # Authentication & Security
 python-jose[cryptography]==3.5.0
 passlib[argon2]==1.7.4
 argon2-cffi==23.1.0
 bcrypt==5.0.0
-pyotp==2.9.0  # TOTP for MFA
-qrcode[pil]==7.4.2  # QR code generation for MFA
-cryptography==42.0.5  # Field-level encryption
+pyotp==2.9.0
+qrcode[pil]==7.4.2
+cryptography==42.0.5
 
 # Validation
 pydantic==2.6.4
@@ -25,33 +25,7 @@ email-validator==2.1.1
 # Redis & Caching
 redis==5.0.3
 hiredis==2.3.2
-# Core Framework
-fastapi==0.121.3
-uvicorn[standard]==0.38.0
-python-multipart==0.0.9
 
-# Database
-sqlalchemy==2.0.30
-psycopg2-binary==2.9.9
-alembic==1.13.1  # Database migrations
-
-# Authentication & Security
-python-jose[cryptography]==3.5.0
-passlib[argon2]==1.7.4
-argon2-cffi==23.1.0
-bcrypt==5.0.0
-pyotp==2.9.0  # TOTP for MFA
-qrcode[pil]==7.4.2  # QR code generation for MFA
-cryptography==42.0.5  # Field-level encryption
-
-# Validation
-pydantic==2.6.4
-pydantic-settings==2.2.1
-email-validator==2.1.1
-
-# Redis & Caching
-redis==5.0.3
-hiredis==2.3.2
 
 # HTTP Client
 httpx==0.27.0
@@ -60,11 +34,9 @@ aiohttp==3.9.3
 # Utilities
 python-dotenv==1.0.1
 pytz==2024.1
-python-dotredis==5.0.1
 
 # Task Queue
 celery==5.3.4
-redis==5.0.1
 
 # Email
 aiosmtplib==3.0.1

@@ -9,13 +9,19 @@ export interface ApiResponse<T = any> {
 export interface User {
   id: string;
   email: string;
-  username: string;
-  full_name?: string;
+  username: string | null;
+  full_name: string | null;
+  bio: string | null;
+  avatar_url: string | null;
+  banner_url: string | null;
+  timezone: string;
+  language: string;
   is_active: boolean;
-  is_superuser: boolean;
+  is_verified: boolean;
   mfa_enabled: boolean;
   created_at: string;
   updated_at: string;
+  last_login_at: string | null;
 }
 
 // Auth Types
@@ -71,4 +77,36 @@ export interface UpdateTaskRequest {
   priority?: TaskPriority;
   due_date?: string;
   tags?: string[];
+}
+
+// Profile Types
+export interface UserStats {
+  account_age_days: number;
+  total_tasks: number;
+  active_sessions: number;
+  last_login: string | null;
+  created_at: string;
+}
+
+export interface UserSession {
+  id: string;
+  device_info: string;
+  ip_address: string;
+  last_activity: string | null;
+  created_at: string;
+  is_current: boolean;
+}
+
+export interface UserPasswordUpdate {
+  current_password: string;
+  new_password: string;
+  confirm_password: string;
+}
+
+export interface UserUpdate {
+  full_name?: string;
+  username?: string;
+  bio?: string;
+  timezone?: string;
+  language?: string;
 }

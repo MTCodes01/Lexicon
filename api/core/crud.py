@@ -306,6 +306,14 @@ class SessionCRUD:
             )
         
         return query.all()
+
+    @staticmethod
+    def get_active_user_sessions(
+        db: Session,
+        user_id: UUID
+    ) -> List[models.Session]:
+        """Get all active sessions for a user."""
+        return SessionCRUD.get_user_sessions(db, user_id, active_only=True)
     
     @staticmethod
     def update_activity(db: Session, session: models.Session) -> models.Session:

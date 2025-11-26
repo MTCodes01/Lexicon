@@ -4,7 +4,7 @@ Handles login, registration, token refresh, MFA setup/verification, and API keys
 """
 from datetime import datetime, timedelta
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, UploadFile, File
 from sqlalchemy.orm import Session
 
 from api.database import get_db
@@ -102,8 +102,13 @@ async def login(
     # Get user
     user = crud.user_crud.get_by_email(db, email=login_request.email)
     
+    import logging
+    logger = logging.getLogger("uvicorn.error")
+    logger.info(f"LOGIN ATTEMPT: {login_request.email} | MFA Code present: {bool(login_request.mfa_code)}")
+    
     # Verify password
     if not user or not verify_password(login_request.password, user.hashed_password):
+        logger.info("LOGIN FAILED: Invalid password")
         # Log failed login
         crud.audit_log_crud.create(
             db,
@@ -121,6 +126,8 @@ async def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
     
+    logger.info("LOGIN: Password verified")
+
     # Check if user is active
     if not user.is_active:
         raise HTTPException(
@@ -286,12 +293,352 @@ async def logout(
     return {"message": "Successfully logged out"}
 
 
+@router.post("/forgot-password")
+async def request_password_reset(
+    request_data: schemas.PasswordResetRequest,
+    db: Session = Depends(get_db)
+):
+    """Request password reset. Always returns success to prevent user enumeration."""
+    import secrets
+    from datetime import datetime, timedelta
+    from api.core import email as email_utils
+    
+    # Find user by email
+    user = crud.user_crud.get_by_email(db, request_data.email)
+    
+    if user:
+        # Generate reset token
+        reset_token = secrets.token_urlsafe(32)
+        
+        # Set token and expiration (1 hour from now)
+        user.reset_token = reset_token
+        user.reset_token_expires = datetime.utcnow() + timedelta(hours=1)
+        db.commit()
+        
+        # Send reset email
+        email_utils.send_password_reset_email(user.email, reset_token)
+        
+        # Log the action
+        crud.audit_log_crud.create(
+            db,
+            user_id=user.id,
+            action=models.AuditAction.PASSWORD_CHANGED,
+            description="Password reset requested",
+        )
+    
+    # Always return success to prevent user enumeration
+    return {"message": "If your email is registered, you will receive a password reset link shortly."}
+
+
+@router.get("/reset-password/{token}")
+async def validate_reset_token(
+    token: str,
+    db: Session = Depends(get_db)
+):
+    """Validate password reset token."""
+    from datetime import datetime
+    
+    # Find user with this token
+    user = db.query(models.User).filter(
+        models.User.reset_token == token
+    ).first()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset token"
+        )
+    
+    # Check if token is expired
+    if not user.reset_token_expires or user.reset_token_expires < datetime.utcnow():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Reset token has expired"
+        )
+    
+    return {"message": "Token is valid", "email": user.email}
+
+
+@router.post("/reset-password")
+async def confirm_password_reset(
+    reset_data: schemas.PasswordResetConfirm,
+    db: Session = Depends(get_db)
+):
+    """Confirm password reset with token and new password."""
+    from datetime import datetime
+    from api.core import email as email_utils
+    
+    # Find user with this token
+    user = db.query(models.User).filter(
+        models.User.reset_token == reset_data.token
+    ).first()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset token"
+        )
+    
+    # Check if token is expired
+    if not user.reset_token_expires or user.reset_token_expires < datetime.utcnow():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Reset token has expired"
+        )
+    
+    # Update password
+    crud.user_crud.update_password(db, user, reset_data.new_password)
+    
+    # Clear reset token
+    user.reset_token = None
+    user.reset_token_expires = None
+    db.commit()
+    
+    # Send confirmation email
+    email_utils.send_password_changed_email(user.email)
+    
+    # Log the action
+    crud.audit_log_crud.create(
+        db,
+        user_id=user.id,
+        action=models.AuditAction.PASSWORD_CHANGED,
+        description="Password reset completed",
+    )
+    
+    return {"message": "Password has been successfully reset"}
+
+
 @router.get("/me", response_model=schemas.UserWithRoles)
 async def get_current_user_info(
     current_user: models.User = Depends(get_current_active_user)
 ):
     """Get current user information with roles."""
     return current_user
+
+
+@router.put("/me", response_model=schemas.UserResponse)
+async def update_current_user(
+    user_update: schemas.UserUpdate,
+    current_user: models.User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Update current user information."""
+    updated_user = crud.user_crud.update(db, current_user, user_update)
+    
+    # Log the action
+    crud.audit_log_crud.create(
+        db,
+        user_id=current_user.id,
+        action=models.AuditAction.UPDATE,
+        resource_type="user",
+        resource_id=str(current_user.id),
+        description="User profile updated",
+    )
+    
+    return updated_user
+
+
+@router.get("/me/stats")
+async def get_user_statistics(
+    current_user: models.User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Get user statistics including account age, task count, and session info."""
+    from datetime import datetime
+    
+    # Calculate account age in days
+    account_age_days = (datetime.utcnow() - current_user.created_at).days
+    
+    # Get total tasks count
+    from api.modules.tasks import models as task_models
+    total_tasks = db.query(task_models.Task).filter(
+        task_models.Task.user_id == current_user.id
+    ).count()
+    
+    # Get active sessions count
+    active_sessions = crud.session_crud.get_active_user_sessions(db, current_user.id)
+    active_sessions_count = len(active_sessions) if active_sessions else 0
+    
+    return {
+        "account_age_days": account_age_days,
+        "total_tasks": total_tasks,
+        "active_sessions": active_sessions_count,
+        "last_login": current_user.last_login_at.isoformat() if current_user.last_login_at else None,
+        "created_at": current_user.created_at.isoformat(),
+    }
+
+
+@router.get("/me/sessions")
+async def get_user_sessions(
+    current_user: models.User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+    request: Request = None
+):
+    """Get all active sessions for the current user."""
+    sessions = crud.session_crud.get_active_user_sessions(db, current_user.id)
+    
+    # Get current request's session token to mark current session
+    current_token = None
+    if request and request.headers.get("Authorization"):
+        auth_header = request.headers.get("Authorization")
+        if auth_header.startswith("Bearer "):
+            current_token = auth_header[7:]
+    
+    result = []
+    for session in sessions:
+        is_current = session.access_token == current_token
+        result.append({
+            "id": str(session.id),
+            "device_info": session.user_agent or "Unknown",
+            "ip_address": session.ip_address or "Unknown",
+            "last_activity": session.last_activity_at.isoformat() if session.last_activity_at else None,
+            "created_at": session.created_at.isoformat(),
+            "is_current": is_current,
+        })
+    
+    return result
+
+
+@router.delete("/me/sessions/{session_id}")
+async def revoke_session(
+    session_id: str,
+    current_user: models.User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Revoke a specific user session."""
+    from uuid import UUID
+    
+    # Convert session_id to UUID
+    try:
+        session_uuid = UUID(session_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid session ID format"
+        )
+    
+    # Get the session
+    session = db.query(models.Session).filter(
+        models.Session.id == session_uuid,
+        models.Session.user_id == current_user.id
+    ).first()
+    
+    if not session:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Session not found"
+        )
+    
+    # Revoke the session
+    crud.session_crud.revoke(db, session)
+    
+    # Log the action
+    crud.audit_log_crud.create(
+        db,
+        user_id=current_user.id,
+        action=models.AuditAction.LOGOUT,
+        description=f"Session revoked: {session_id[:8]}...",
+    )
+    
+    return {"message": "Session revoked successfully"}
+
+
+@router.post("/me/avatar")
+async def upload_avatar(
+    file: UploadFile,
+    current_user: models.User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Upload user avatar image."""
+    from api.core.storage import upload_avatar as upload_avatar_file, delete_avatar
+    
+    # Delete old avatar if exists
+    if current_user.avatar_url:
+        delete_avatar(current_user.avatar_url)
+    
+    # Upload new avatar
+    avatar_url = await upload_avatar_file(file, str(current_user.id))
+    
+    # Update user record
+    current_user.avatar_url = avatar_url
+    db.commit()
+    db.refresh(current_user)
+    
+    # Log avatar update
+    crud.audit_log_crud.create(
+        db,
+        user_id=current_user.id,
+        action=models.AuditAction.UPDATE,
+        resource_type="user",
+        resource_id=str(current_user.id),
+        description="Avatar uploaded",
+    )
+    
+    return {"avatar_url": avatar_url, "message": "Avatar uploaded successfully"}
+
+
+@router.delete("/me/avatar")
+async def delete_user_avatar(
+    current_user: models.User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Delete user avatar."""
+    from api.core.storage import delete_avatar
+    
+    if not current_user.avatar_url:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No avatar to delete"
+        )
+    
+    # Delete from storage
+    delete_avatar(current_user.avatar_url)
+    
+    # Remove from user record
+    current_user.avatar_url = None
+    db.commit()
+    
+    return {"message": "Avatar deleted successfully"}
+
+
+@router.post("/me/banner", response_model=schemas.UserResponse)
+async def upload_banner(
+    file: UploadFile = File(...),
+    current_user: models.User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Upload user profile banner."""
+    from api.core.storage import upload_banner as upload_banner_file, delete_banner
+    
+    # Delete existing banner if any
+    if current_user.banner_url:
+        delete_banner(current_user.banner_url)
+    
+    # Upload new banner
+    banner_url = await upload_banner_file(file, str(current_user.id))
+    
+    # Update user
+    current_user.banner_url = banner_url
+    db.commit()
+    db.refresh(current_user)
+    
+    return current_user
+
+
+@router.delete("/me/banner", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_banner(
+    current_user: models.User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Delete user profile banner."""
+    from api.core.storage import delete_banner
+    
+    if current_user.banner_url:
+        delete_banner(current_user.banner_url)
+        
+        current_user.banner_url = None
+        db.add(current_user)
+        db.commit()
 
 
 @router.put("/me", response_model=schemas.UserResponse)

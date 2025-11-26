@@ -12,7 +12,17 @@ export function TopBar() {
   const { theme, setTheme } = useTheme();
   const { user, logout } = useAuthStore();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [profileImage, setProfileImage] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Load profile image directly from user data
+  useEffect(() => {
+    if (user?.avatar_url) {
+      setProfileImage(user.avatar_url);
+    } else {
+      setProfileImage(null);
+    }
+  }, [user]);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -29,6 +39,18 @@ export function TopBar() {
   const handleLogout = async () => {
     await logout();
     router.push("/login");
+  };
+
+  const getInitials = () => {
+    if (!user) return "U";
+    if (user.full_name) {
+      const names = user.full_name.split(" ");
+      if (names.length >= 2) {
+        return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
+      }
+      return user.full_name[0].toUpperCase();
+    }
+    return user.username?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || "U";
   };
 
   return (
@@ -62,10 +84,18 @@ export function TopBar() {
             onClick={() => setShowUserMenu(!showUserMenu)}
             className="flex items-center gap-2 rounded-md px-3 py-2 hover:bg-accent transition-colors"
           >
-            <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-medium text-sm">
-                {user?.full_name?.[0] || user?.username?.[0] || user?.email?.[0] || "U"}
-              </span>
+            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center overflow-hidden ring-2 ring-background shadow-md">
+              {profileImage ? (
+                <img 
+                  src={profileImage} 
+                  alt="Profile" 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span className="text-primary-foreground font-medium text-sm">
+                  {getInitials()}
+                </span>
+              )}
             </div>
             <div className="hidden md:block text-left">
               <p className="text-sm font-medium">
