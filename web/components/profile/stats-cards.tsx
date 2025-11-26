@@ -61,12 +61,35 @@ export function StatsCards() {
 
   if (!stats) return null;
 
+  // Helper function to format account age
+  const formatAccountAge = (days: number, createdAt: string) => {
+    if (days === 0) {
+      const created = new Date(createdAt);
+      const now = new Date();
+      const hoursDiff = Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60));
+      
+      if (hoursDiff < 1) {
+        const minutesDiff = Math.floor((now.getTime() - created.getTime()) / (1000 * 60));
+        return minutesDiff <= 1 ? "Just now" : `${minutesDiff} min ago`;
+      }
+      return hoursDiff === 1 ? "1 hour ago" : `${hoursDiff} hours ago`;
+    }
+    if (days === 1) return "Yesterday";
+    if (days < 30) return `${days} days ago`;
+    if (days < 365) {
+      const months = Math.floor(days / 30);
+      return `${months} ${months === 1 ? 'month' : 'months'} ago`;
+    }
+    const years = Math.floor(days / 365);
+    return `${years} ${years === 1 ? 'year' : 'years'} ago`;
+  };
+
   const statCards = [
     {
       icon: Calendar,
       label: "Account Age",
       value: stats.account_age_days,
-      suffix: " days",
+      displayValue: formatAccountAge(stats.account_age_days, stats.created_at),
       gradient: "from-blue-500/10 via-cyan-500/5 to-transparent",
       iconBg: "bg-gradient-to-br from-blue-500/20 to-cyan-500/20",
       iconColor: "text-blue-600 dark:text-blue-400",
@@ -113,38 +136,34 @@ export function StatsCards() {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      {statCards.map((stat, index) => {
-        const animatedValue = useAnimatedValue(stat.value, 1200 + index * 100);
-        
-        return (
-          <div
-            key={stat.label}
-            className={`group relative overflow-hidden p-6 border rounded-xl bg-gradient-to-br ${stat.gradient} hover:shadow-lg transition-all duration-300 ${stat.borderAccent} animate-in fade-in slide-in-from-bottom-4`}
-            style={{ animationDelay: `${index * 100}ms` }}
-          >
-            {/* Animated background glow */}
-            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            
-            <div className="relative">
-              <div className="flex items-center justify-between mb-4">
-                <div className={`p-3 rounded-lg ${stat.iconBg} shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                  <stat.icon className={`h-6 w-6 ${stat.iconColor}`} />
-                </div>
-              </div>
-              
-              <div className="space-y-1">
-                <p className="text-3xl font-bold bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text">
-                  {stat.displayValue !== undefined 
-                    ? stat.displayValue 
-                    : `${animatedValue}${stat.suffix}`
-                  }
-                </p>
-                <p className="text-sm text-muted-foreground font-medium">{stat.label}</p>
+      {statCards.map((stat, index) => (
+        <div
+          key={stat.label}
+          className={`group relative overflow-hidden p-6 border rounded-xl bg-gradient-to-br ${stat.gradient} hover:shadow-lg transition-all duration-300 ${stat.borderAccent} animate-in fade-in slide-in-from-bottom-4`}
+          style={{ animationDelay: `${index * 100}ms` }}
+        >
+          {/* Animated background glow */}
+          <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          
+          <div className="relative">
+            <div className="flex items-center justify-between mb-4">
+              <div className={`p-3 rounded-lg ${stat.iconBg} shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                <stat.icon className={`h-6 w-6 ${stat.iconColor}`} />
               </div>
             </div>
+            
+            <div className="space-y-1">
+              <p className="text-3xl font-bold bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text">
+                {stat.displayValue !== undefined 
+                  ? stat.displayValue 
+                  : `${stat.value}${stat.suffix}`
+                }
+              </p>
+              <p className="text-sm text-muted-foreground font-medium">{stat.label}</p>
+            </div>
           </div>
-        );
-      })}
+        </div>
+      ))}
     </div>
   );
 }

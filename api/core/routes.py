@@ -362,9 +362,20 @@ async def revoke_session(
     db: Session = Depends(get_db)
 ):
     """Revoke a specific user session."""
+    from uuid import UUID
+    
+    # Convert session_id to UUID
+    try:
+        session_uuid = UUID(session_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid session ID format"
+        )
+    
     # Get the session
     session = db.query(models.Session).filter(
-        models.Session.id == session_id,
+        models.Session.id == session_uuid,
         models.Session.user_id == current_user.id
     ).first()
     
@@ -375,7 +386,7 @@ async def revoke_session(
         )
     
     # Revoke the session
-    crud.session_crud.revoke_session(db, session)
+    crud.session_crud.revoke(db, session)
     
     # Log the action
     crud.audit_log_crud.create(

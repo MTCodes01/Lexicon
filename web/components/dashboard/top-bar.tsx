@@ -15,30 +15,12 @@ export function TopBar() {
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Load profile image from user data or localStorage
+  // Load profile image directly from user data
   useEffect(() => {
-    // First try to get from user data (from backend)
     if (user?.avatar_url) {
       setProfileImage(user.avatar_url);
-    } else if (typeof window !== "undefined") {
-      const savedImage = localStorage.getItem("profile_image");
-      if (savedImage) {
-        setProfileImage(savedImage);
-      }
-
-      // Listen for profile image updates
-      const handleImageUpdate = () => {
-        const updatedImage = localStorage.getItem("profile_image");
-        setProfileImage(updatedImage);
-      };
-
-      window.addEventListener("profile_image_updated", handleImageUpdate);
-      window.addEventListener("storage", handleImageUpdate);
-
-      return () => {
-        window.removeEventListener("profile_image_updated", handleImageUpdate);
-        window.removeEventListener("storage", handleImageUpdate);
-      };
+    } else {
+      setProfileImage(null);
     }
   }, [user]);
 

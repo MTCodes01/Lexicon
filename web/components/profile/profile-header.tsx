@@ -17,23 +17,17 @@ export function ProfileHeader() {
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Load initial images from user data or local storage
+    // Load avatar and banner directly from user data
     if (user?.avatar_url) {
       setAvatarUrl(user.avatar_url);
-      // Also save to localStorage for caching
-      if (typeof window !== "undefined") {
-        localStorage.setItem("profile_image", user.avatar_url);
-      }
-    } else if (typeof window !== "undefined") {
-      // Fallback to localStorage
-      const savedImage = localStorage.getItem("profile_image");
-      if (savedImage) {
-        setAvatarUrl(savedImage);
-      }
+    } else {
+      setAvatarUrl(null);
     }
 
     if (user?.banner_url) {
       setBannerUrl(user.banner_url);
+    } else {
+      setBannerUrl(null);
     }
   }, [user]);
 
