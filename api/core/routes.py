@@ -102,8 +102,13 @@ async def login(
     # Get user
     user = crud.user_crud.get_by_email(db, email=login_request.email)
     
+    import logging
+    logger = logging.getLogger("uvicorn.error")
+    logger.info(f"LOGIN ATTEMPT: {login_request.email} | MFA Code present: {bool(login_request.mfa_code)}")
+    
     # Verify password
     if not user or not verify_password(login_request.password, user.hashed_password):
+        logger.info("LOGIN FAILED: Invalid password")
         # Log failed login
         crud.audit_log_crud.create(
             db,
@@ -121,6 +126,8 @@ async def login(
             headers={"WWW-Authenticate": "Bearer"},
         )
     
+    logger.info("LOGIN: Password verified")
+
     # Check if user is active
     if not user.is_active:
         raise HTTPException(
@@ -284,6 +291,121 @@ async def logout(
     )
     
     return {"message": "Successfully logged out"}
+
+
+@router.post("/forgot-password")
+async def request_password_reset(
+    request_data: schemas.PasswordResetRequest,
+    db: Session = Depends(get_db)
+):
+    """Request password reset. Always returns success to prevent user enumeration."""
+    import secrets
+    from datetime import datetime, timedelta
+    from api.core import email as email_utils
+    
+    # Find user by email
+    user = crud.user_crud.get_by_email(db, request_data.email)
+    
+    if user:
+        # Generate reset token
+        reset_token = secrets.token_urlsafe(32)
+        
+        # Set token and expiration (1 hour from now)
+        user.reset_token = reset_token
+        user.reset_token_expires = datetime.utcnow() + timedelta(hours=1)
+        db.commit()
+        
+        # Send reset email
+        email_utils.send_password_reset_email(user.email, reset_token)
+        
+        # Log the action
+        crud.audit_log_crud.create(
+            db,
+            user_id=user.id,
+            action=models.AuditAction.PASSWORD_CHANGED,
+            description="Password reset requested",
+        )
+    
+    # Always return success to prevent user enumeration
+    return {"message": "If your email is registered, you will receive a password reset link shortly."}
+
+
+@router.get("/reset-password/{token}")
+async def validate_reset_token(
+    token: str,
+    db: Session = Depends(get_db)
+):
+    """Validate password reset token."""
+    from datetime import datetime
+    
+    # Find user with this token
+    user = db.query(models.User).filter(
+        models.User.reset_token == token
+    ).first()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset token"
+        )
+    
+    # Check if token is expired
+    if not user.reset_token_expires or user.reset_token_expires < datetime.utcnow():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Reset token has expired"
+        )
+    
+    return {"message": "Token is valid", "email": user.email}
+
+
+@router.post("/reset-password")
+async def confirm_password_reset(
+    reset_data: schemas.PasswordResetConfirm,
+    db: Session = Depends(get_db)
+):
+    """Confirm password reset with token and new password."""
+    from datetime import datetime
+    from api.core import email as email_utils
+    
+    # Find user with this token
+    user = db.query(models.User).filter(
+        models.User.reset_token == reset_data.token
+    ).first()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset token"
+        )
+    
+    # Check if token is expired
+    if not user.reset_token_expires or user.reset_token_expires < datetime.utcnow():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Reset token has expired"
+        )
+    
+    # Update password
+    crud.user_crud.update_password(db, user, reset_data.new_password)
+    
+    # Clear reset token
+    user.reset_token = None
+    user.reset_token_expires = None
+    db.commit()
+    
+    # Send confirmation email
+    email_utils.send_password_changed_email(user.email)
+    
+    # Log the action
+    crud.audit_log_crud.create(
+        db,
+        user_id=user.id,
+        action=models.AuditAction.PASSWORD_CHANGED,
+        description="Password reset completed",
+    )
+    
+    return {"message": "Password has been successfully reset"}
 
 
 @router.get("/me", response_model=schemas.UserWithRoles)

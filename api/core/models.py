@@ -101,6 +101,10 @@ class User(Base):
     last_login_at = Column(DateTime, nullable=True)
     email_verified_at = Column(DateTime, nullable=True)
     
+    # Password reset
+    reset_token = Column(String(255), nullable=True)
+    reset_token_expires = Column(DateTime, nullable=True)
+    
     # Relationships
     roles = relationship("Role", secondary=user_roles, back_populates="users", lazy="selectin")
     sessions = relationship("Session", back_populates="user", cascade="all, delete-orphan")

@@ -81,6 +81,17 @@ class UserPasswordUpdate(BaseModel):
     new_password: str = Field(..., min_length=8, max_length=100)
 
 
+class PasswordResetRequest(BaseModel):
+    """Schema for requesting password reset."""
+    email: EmailStr
+
+
+class PasswordResetConfirm(BaseModel):
+    """Schema for confirming password reset."""
+    token: str
+    new_password: str = Field(..., min_length=8, max_length=100)
+
+
 class UserResponse(UserBase):
     """Schema for user response."""
     id: UUID4

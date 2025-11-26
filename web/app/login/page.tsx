@@ -90,6 +90,15 @@ export default function LoginPage() {
                 disabled={isLoading}
               />
             )}
+            
+            <div className="flex items-center justify-end">
+              <Link 
+                href="/forgot-password" 
+                className="text-sm text-primary hover:underline"
+              >
+                Forgot password?
+              </Link>
+            </div>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
             <Button
