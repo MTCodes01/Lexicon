@@ -9,16 +9,19 @@ export interface ApiResponse<T = any> {
 export interface User {
   id: string;
   email: string;
-  username: string;
-  full_name?: string;
-  bio?: string;
-  avatar_url?: string;
-  banner_url?: string;
+  username: string | null;
+  full_name: string | null;
+  bio: string | null;
+  avatar_url: string | null;
+  banner_url: string | null;
+  timezone: string;
+  language: string;
   is_active: boolean;
-  is_superuser: boolean;
+  is_verified: boolean;
   mfa_enabled: boolean;
   created_at: string;
   updated_at: string;
+  last_login_at: string | null;
 }
 
 // Auth Types
@@ -103,5 +106,7 @@ export interface UserPasswordUpdate {
 export interface UserUpdate {
   full_name?: string;
   username?: string;
-  email?: string;
+  bio?: string;
+  timezone?: string;
+  language?: string;
 }

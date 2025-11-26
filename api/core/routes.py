@@ -294,6 +294,28 @@ async def get_current_user_info(
     return current_user
 
 
+@router.put("/me", response_model=schemas.UserResponse)
+async def update_current_user(
+    user_update: schemas.UserUpdate,
+    current_user: models.User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Update current user information."""
+    updated_user = crud.user_crud.update(db, current_user, user_update)
+    
+    # Log the action
+    crud.audit_log_crud.create(
+        db,
+        user_id=current_user.id,
+        action=models.AuditAction.UPDATE,
+        resource_type="user",
+        resource_id=str(current_user.id),
+        description="User profile updated",
+    )
+    
+    return updated_user
+
+
 @router.get("/me/stats")
 async def get_user_statistics(
     current_user: models.User = Depends(get_current_active_user),

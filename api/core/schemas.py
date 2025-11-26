@@ -279,20 +279,6 @@ class SettingCreate(SettingBase):
     pass
 
 
-class SettingUpdate(BaseModel):
-    """Schema for updating a setting."""
-    value: dict | str | int | float | bool | None = None
-
-
-class SettingResponse(SettingBase, BaseSchema):
-    """Schema for setting response."""
-    id: UUID4
-    user_id: Optional[UUID4] = None
-    is_system: bool
-    created_at: datetime
-    updated_at: datetime
-
-
 # Pagination schemas
 class PaginationParams(BaseModel):
     """Pagination parameters."""
